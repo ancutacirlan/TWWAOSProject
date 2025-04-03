@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from app import db  # Importă instanța globală a bazei de date
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum, Date, Table
@@ -26,6 +26,32 @@ class User(db.Model):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     role = Column(SQLEnum(UserRole), nullable=False)
+    teacherId = db.Column(db.Integer, nullable=True)  # Se validează mai jos
+    groupName = db.Column(db.String, nullable=True)  # Se validează mai jos
+
+    @validates("teacherId", "groupName")
+    def validate_fields(self, key, value):
+        """ Validăm ca teacherId să nu fie NULL dacă rolul este CD și groupName dacă rolul este SG """
+        if self.role == UserRole.CD and key == "teacherId" and value is None:
+            raise ValueError("teacherId nu poate fi NULL pentru un utilizator cu rolul CD.")
+        if self.role == UserRole.SG and key == "groupName" and not value:
+            raise ValueError("groupName nu poate fi NULL pentru un utilizator cu rolul SG.")
+        return value
+
+    def get_id(self):
+        return str(self.user_id)  # Trebuie să returneze un string
+
+    @property
+    def is_active(self):
+        return True  # Poți face și o verificare, ex. dacă utilizatorul este aprobat
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
 
 class Group(db.Model):
     __tablename__ = "groups"
@@ -51,8 +77,12 @@ class Course(db.Model):
     __tablename__ = "courses"
     course_id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    studyYear = Column(Integer, nullable=True)
+    specialization = Column(String, nullable=True)
+    facultyShortName = Column(String, nullable=True)
     # Profesor coordonator (unic)
     coordinator_id = Column(Integer, ForeignKey("users.user_id"))
+
     coordinator = relationship("User", foreign_keys=[coordinator_id])
 
     # Lista de profesori asistenți (many-to-many)
