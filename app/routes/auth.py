@@ -1,5 +1,6 @@
 import os
 
+from flasgger import swag_from
 from flask import Blueprint, redirect, url_for, session, flash
 from authlib.integrations.flask_client import OAuth
 from flask_login import login_user, logout_user, login_required
@@ -22,13 +23,34 @@ def init_oauth(app):
     )
 
 @auth_bp.route("/login")
+@swag_from({
+    'tags': ['Autentificare'],
+    'summary': 'Login Google',
+    'description': 'Redirecționează utilizatorul către autentificarea Google.',
+    'responses': {
+        302: {
+            'description': 'Redirecționare către Google pentru autentificare.'
+        }
+    }
+})
 def login():
     session["nonce"] = os.urandom(16).hex()  # Generăm un nonce aleatoriu
     return oauth.google.authorize_redirect(url_for("auth.callback", _external=True))
 
 @auth_bp.route("/login/callback")
+@swag_from({
+    'tags': ['Autentificare'],
+    'summary': 'Callback după login',
+    'description': 'Primește tokenul de la Google, verifică emailul și loghează utilizatorul dacă există în baza de date.',
+    'responses': {
+        302: {
+            'description': 'Redirecționare către pagina de succes sau eroare.'
+        }
+    }
+})
 def callback():
     token = oauth.google.authorize_access_token()
+    print(token)
 
     # În loc de parse_id_token(), folosim userinfo()
     user_info = oauth.google.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
@@ -40,7 +62,7 @@ def callback():
     email = user_info["email"]
     print(email)
     user = User.query.filter_by(email=email).first()
-    print(user)
+    print(user.role)
 
     if user:
         login_user(user)
@@ -53,6 +75,16 @@ def callback():
 
 @auth_bp.route("/logout")
 @login_required
+@swag_from({
+    'tags': ['Autentificare'],
+    'summary': 'Logout',
+    'description': 'Deconectează utilizatorul curent și șterge sesiunea.',
+    'responses': {
+        302: {
+            'description': 'Redirecționare după logout.'
+        }
+    }
+})
 def logout():
     logout_user()
     session.pop("profile", None)

@@ -1,5 +1,5 @@
 from app import create_app
-from app.import_professors import fetch_and_store_data
+from app.import_data import fetch_and_store_data
 
 app = create_app()
 
