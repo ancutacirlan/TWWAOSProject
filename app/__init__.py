@@ -7,6 +7,7 @@ from flask_login import LoginManager, login_manager
 
 from app.config import Config
 from app.database import db, migrate
+from app.import_data import add_admin
 from app.models import User
 from app.routes.courses import courses_bp
 from app.routes.download import download_bp
