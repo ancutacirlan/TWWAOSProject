@@ -7,6 +7,7 @@ from flask_jwt_extended import get_jwt_identity
 from werkzeug.utils import secure_filename
 
 from app.decorators import roles_required
+from app.email import send_email_notification
 from app.import_data import fetch_and_store_data
 from app.models import db, User, UserRole, Group
 
@@ -141,7 +142,21 @@ def upload_users():
 })
 def sync_data():
     try:
+        #pentru profesori de rescris
         fetch_and_store_data()
+        send_email_notification(
+            to="ancuta.cirlan1@student.usv.ro",
+            subject="Incarcare date - programare examene",
+            body=f"S-au incarcat datele necesare pentru programarea examenelor. "
+                 f"Intrati in aplicatie si setati metoda de evaluare pentru cursurile la care sunteti coordonator."
+        )
+        #pentru studenti de rescris
+        send_email_notification(
+            to="ancuta.cirlan1@student.usv.ro",
+            subject="Incarcare date - programare examene",
+            body=f"S-au incarcat datele necesare pentru programarea examenelor. "
+                 f"Intrati in aplicatie si alegeti datele pentru examen"
+        )
         return jsonify({"msg": "Datele au fost sincronizate cu succes."}), 200
     except Exception as e:
         return jsonify({"msg": f"Eroare: {str(e)}"}), 500
