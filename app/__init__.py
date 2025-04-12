@@ -1,18 +1,23 @@
+from flask_jwt_extended import JWTManager
+
 import app
 from flasgger import Swagger
 from flask import Flask
-from flask_login import LoginManager
+from flask_login import LoginManager, login_manager
 
 from app.config import Config
 from app.database import db, migrate
 from app.models import User
+from app.routes.courses import courses_bp
+from app.routes.download import download_bp
+from app.routes.exams import exams_bp
 from app.routes.import_from_excel import upload_bp
 from app.routes.auth import init_oauth, auth_bp
 from app.routes.settings import settings_bp
 from app.routes.users import users_bp
 
-login_manager = LoginManager()
-login_manager.login_view = "auth.login"
+jwt = JWTManager()
+
 
 def create_app():
     """Funcție de creare a aplicației Flask"""
@@ -33,26 +38,34 @@ def create_app():
                 "in": "header",
                 "description": "Introdu Bearer <token> pentru autentificare"
             }
-        }
+        },
+        "security": [{"Bearer": []}]
+
     }
     Swagger(app, template=swagger_template)
 
     # Inițializăm baza de date și Flask-Migrate
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
+
+    jwt.init_app(app)
     init_oauth(app)
 
     # Importă modelele pentru a fi vizibile în migrații
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.get(int(user_id))
+    # # Aplicația va folosi un alt mecanism de autentificare pentru utilizatorii logați cu JWT
+    # @jwt.user_loader_callback
+    # def load_user_from_jwt(identity):
+    #     # identity va fi de obicei ID-ul utilizatorului din token
+    #     return User.query.get(identity)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(courses_bp)
+    app.register_blueprint(exams_bp)
+    app.register_blueprint(download_bp)
 
 
 

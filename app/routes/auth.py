@@ -1,13 +1,14 @@
 import os
 
 from flasgger import swag_from
-from flask import Blueprint, redirect, url_for, session, flash
+from flask import Blueprint, request, jsonify, session, redirect, url_for
 from authlib.integrations.flask_client import OAuth
-from flask_login import login_user, logout_user, login_required
+from flask_jwt_extended import create_access_token
 from app.models import User
 
 auth_bp = Blueprint("auth", __name__)
 oauth = OAuth()
+
 
 def init_oauth(app):
     oauth.init_app(app)
@@ -21,6 +22,7 @@ def init_oauth(app):
         jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
         client_kwargs={"scope": "openid email profile"},
     )
+
 
 @auth_bp.route("/login")
 @swag_from({
@@ -37,44 +39,46 @@ def login():
     session["nonce"] = os.urandom(16).hex()  # Generăm un nonce aleatoriu
     return oauth.google.authorize_redirect(url_for("auth.callback", _external=True))
 
-@auth_bp.route("/login/callback")
+
+@auth_bp.route("/auth/callback")
 @swag_from({
     'tags': ['Autentificare'],
     'summary': 'Callback după login',
     'description': 'Primește tokenul de la Google, verifică emailul și loghează utilizatorul dacă există în baza de date.',
     'responses': {
-        302: {
-            'description': 'Redirecționare către pagina de succes sau eroare.'
+        200: {
+            'description': 'Token de acces JWT trimis utilizatorului.'
+        },
+        403: {
+            'description': 'Acces refuzat. Utilizatorul nu are permisiune.'
         }
     }
 })
 def callback():
+    # Schimbăm codul de autorizare pentru un token de acces
     token = oauth.google.authorize_access_token()
-    print(token)
 
-    # În loc de parse_id_token(), folosim userinfo()
+    # Obținem informațiile despre utilizator
     user_info = oauth.google.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
 
     if not user_info:
-        flash("Eroare la autentificare", "danger")
-        return redirect(url_for("index"))
+        return jsonify({"error": "Nu s-au putut obține informațiile utilizatorului."}), 400
 
     email = user_info["email"]
-    print(email)
     user = User.query.filter_by(email=email).first()
-    print(user.role)
 
     if user:
-        login_user(user)
-        session["profile"] = user_info
-        flash("Autentificare reușită!", "success")
-        return redirect(url_for("users.get_login"))
+        # Creăm tokenul JWT pentru utilizator
+        access_token = create_access_token(
+            identity=str(user.user_id),
+            additional_claims={"role": user.role.value}
+        )
+        return jsonify(access_token=access_token), 200
 
-    flash("Nu ai acces. Contactează administratorul.", "danger")
-    return redirect(url_for("users.get_fail"))
+    return jsonify({"error": "Nu ai acces. Contactează administratorul."}), 403
+
 
 @auth_bp.route("/logout")
-@login_required
 @swag_from({
     'tags': ['Autentificare'],
     'summary': 'Logout',
@@ -86,7 +90,6 @@ def callback():
     }
 })
 def logout():
-    logout_user()
+    # Închide sesiunea utilizatorului
     session.pop("profile", None)
-    flash("Te-ai deconectat cu succes.", "info")
-    return redirect(url_for("users.get_logout"))
+    return redirect(url_for("index"))

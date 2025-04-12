@@ -8,7 +8,7 @@ from app.models import ExaminationPeriod, db, ExamType, UserRole
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
-@settings_bp.route("/periods", methods=["POST"])
+@settings_bp.route("/examination-periods", methods=["POST"])
 @swag_from({
     "tags": ["Setări"],
     "summary": "Creează o perioadă de examinare",
@@ -36,7 +36,7 @@ settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
         403: {"description": "Acces interzis"}
     }
 })
-@roles_required(UserRole.ADM, UserRole.SEC)
+@roles_required("ADM", "SEC")
 def create_examination_period():
 
     data = request.get_json()
@@ -66,7 +66,7 @@ def create_examination_period():
         return jsonify({"error": str(e)}), 400
 
 
-@settings_bp.route("/periods", methods=["GET"])
+@settings_bp.route("/examination-periods", methods=["GET"])
 @swag_from({
     "tags": ["Setări"],
     "summary": "Listează perioadele de examinare",
@@ -80,7 +80,7 @@ def create_examination_period():
                 "items": {
                     "type": "object",
                     "properties": {
-                        "setting_id": {"type": "integer"},
+                        "examination_period_id": {"type": "integer"},
                         "name": {"type": "string"},
                         "period_start": {"type": "string"},
                         "period_end": {"type": "string"},
@@ -90,8 +90,8 @@ def create_examination_period():
         }
     }
 })
-@roles_required(UserRole.ADM, UserRole.SEC)
-def get_examination_period():
+@roles_required("ADM", "SEC", "SG", "CD")
+def get_examination_periods():
     periods = ExaminationPeriod.query.all()
     return jsonify([
         {
@@ -102,7 +102,7 @@ def get_examination_period():
         } for p in periods
     ])
 
-@settings_bp.route("/periods/<int:examination_period_id>", methods=["PUT"])
+@settings_bp.route("/examination-periods/<int:examination_period_id>", methods=["PUT"])
 @swag_from({
     "tags": ["Setări"],
     "summary": "Editează o perioadă de examinare",
@@ -130,7 +130,7 @@ def get_examination_period():
         404: {"description": "Perioadă inexistentă"}
     }
 })
-@roles_required(UserRole.ADM, UserRole.SEC)
+@roles_required("ADM", "SEC")
 def update_examination_period(examination_period_id):
     period = ExaminationPeriod.query.get(examination_period_id)
     if not period:
@@ -157,7 +157,7 @@ def update_examination_period(examination_period_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@settings_bp.route("/periods/<int:examination_period_id>", methods=["DELETE"])
+@settings_bp.route("/examination-periods/<int:examination_period_id>", methods=["DELETE"])
 @swag_from({
     "tags": ["Setări"],
     "summary": "Șterge o perioadă de examinare",
@@ -171,7 +171,7 @@ def update_examination_period(examination_period_id):
         404: {"description": "Perioadă inexistentă"}
     }
 })
-@roles_required(UserRole.ADM, UserRole.SEC)
+@roles_required("ADM", "SEC")
 def delete_examination_period(examination_period_id):
     period = ExaminationPeriod.query.get(examination_period_id)
     if not period:
@@ -180,3 +180,36 @@ def delete_examination_period(examination_period_id):
     db.session.delete(period)
     db.session.commit()
     return jsonify({"message": "Perioadă ștearsă"}), 200
+
+
+@settings_bp.route('/examination-periods/<int:period_id>', methods=['GET'])
+@roles_required("ADM", "SEC","CD","SG")
+@swag_from({
+    'tags': ['Setări'],
+    'summary': 'Obține o perioadă de examinare după ID',
+    'description': 'Returnează informațiile pentru o anumită perioadă de examinare.',
+    'parameters': [
+        {
+            'name': 'period_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID-ul perioadei de examinare'
+        }
+    ],
+    'responses': {
+        200: {'description': 'Datele perioadei au fost returnate cu succes'},
+        404: {'description': 'Perioada nu a fost găsită'}
+    }
+})
+def get_examination_period_by_id(period_id):
+    period = ExaminationPeriod.query.get(period_id)
+    if not period:
+        return jsonify({"message": "Perioada nu a fost găsită"}), 404
+
+    return jsonify({
+        "examination_period_id": period.examination_period_id,
+        "name": period.name,
+        "period_start": period.period_start.isoformat(),
+        "period_end": period.period_end.isoformat()
+    }), 200

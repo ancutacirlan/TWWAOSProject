@@ -1,6 +1,3 @@
-import os
-from os import getenv
-
 from flask import current_app
 
 from app.database import db
@@ -8,8 +5,20 @@ from app.models import User, UserRole, Course, Room
 
 API_PROFESSORS = "https://orar.usv.ro/orar/vizualizare/data/cadre.php?json"
 API_COURSES = "https://orar.usv.ro/orar/vizualizare/data/orarSPG.php?ID={}&mod=prof&json"
-FACULTY_NAME = getenv("FACULTY_NAME")
-SHORT_FACULTY_NAME = getenv("SHORT_FACULTY_NAME")
+
+
+def add_admin():
+    current_app.config.get("ADMIN_EMAIL")
+    user = User.query.filter_by(email=current_app.config.get("ADMIN_EMAIL")).first()
+    if not user:
+        user = User(
+            name="Admin",
+            email=current_app.config.get("ADMIN_EMAIL"),
+            role=UserRole.ADM,
+            teacherId=None
+        )
+        db.session.add(user)
+        db.session.commit()
 
 
 def fetch_and_store_data():
@@ -22,7 +31,7 @@ def fetch_and_store_data():
     professors = response.json()
     with current_app.app_context():
         for prof in professors:
-            if prof["facultyName"] == os.getenv("FACULTY_NAME"):
+            if prof["facultyName"] == current_app.config.get("FACULTY_NAME"):
                 user = User.query.filter_by(email=prof["emailAddress"]).first()
                 if not user:
                     user = User(
@@ -73,7 +82,7 @@ def fetch_and_store_courses(professor):
         # Extragem anul și specializarea, verificând facultatea
         study_year, specialization, faculty = extract_year_specialization_from_pair(course_groups, entry["id"])
         if study_year is None or specialization is None or faculty is None:
-            print(f"⚠️ Curs ignorat (nu este de la {SHORT_FACULTY_NAME}): {topic_name} - {professor.teacherId}")
+            print(f"⚠️ Curs ignorat (nu este de la {current_app.config.get("SHORT_FACULTY_NAME")}): {topic_name} - {professor.teacherId}")
             continue
 
 
@@ -86,14 +95,14 @@ def fetch_and_store_courses(professor):
         else:
             course = Course.query.filter_by(
                 name=topic_name,
-                studyYear=study_year,
+                study_year=study_year,
                 specialization=specialization
             ).first()
 
             if not course:
                 course = Course(
                     name=topic_name,
-                    studyYear=study_year,
+                    study_year=study_year,
                     specialization=specialization,
                     coordinator_id=None,  # Va fi actualizat ulterior
                 )
@@ -127,7 +136,7 @@ def extract_year_specialization_from_pair(course_groups, course_id):
 
     faculty_info = pair[1]  # Al doilea element conține facultatea și uneori specializarea
 
-    if SHORT_FACULTY_NAME not in faculty_info:
+    if current_app.config.get("SHORT_FACULTY_NAME") not in faculty_info:
         return None, None, None  # Dacă facultatea nu este corespunzătoare, returnăm None
 
     faculties = faculty_info.split(",")  # Poate conține mai multe facultăți

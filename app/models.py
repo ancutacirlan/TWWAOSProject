@@ -81,8 +81,13 @@ class User(db.Model):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     role = Column(SQLEnum(UserRole), nullable=False)
-    teacherId = Column(Integer, nullable=True)
+    teacherId = Column(Integer, nullable=True, unique=True)
 
+    # Relații
+    led_groups = relationship("Group", back_populates="leader", foreign_keys="Group.leader_id")
+    coordinated_courses = relationship("Course", back_populates="coordinator", foreign_keys="Course.coordinator_id")
+    exams_as_professor = relationship("Exam", back_populates="professor", foreign_keys="Exam.professor_id")
+    exams_as_assistant = relationship("Exam", back_populates="assistant", foreign_keys="Exam.assistant_id")
 
     @validates("teacherId")
     def validate_fields(self, key, value):
@@ -128,10 +133,21 @@ class Group(db.Model):
     __tablename__ = "groups"
     group_id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
-    leader_id = Column(Integer, ForeignKey("users.user_id"))
+    leader_id = Column(Integer, ForeignKey("users.user_id"), unique=True)
 
     specialization = Column(String, nullable=True)
     year_of_study = Column(Integer, nullable=True)
+
+    # Relații
+    leader = relationship("User", back_populates="led_groups")
+    exams = relationship("Exam", back_populates="group")
+
+@validates("leader_id")
+def validate_unique_leader(cls, key, leader_id):
+    existing = db.session.query(Group).filter_by(leader_id=leader_id).first()
+    if existing:
+        raise ValueError("Un utilizator poate fi lider doar pentru o singură grupă.")
+    return leader_id
 
 
 class Room(db.Model):
@@ -152,6 +168,9 @@ class Room(db.Model):
     room_id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     building = Column(String, nullable=False)
+
+    # Relații
+    exams = relationship("Exam", back_populates="room")
 
     # Tabel intermediar pentru relația many-to-many dintre cursuri și asistenți
 course_assistants = Table(
@@ -181,16 +200,17 @@ class Course(db.Model):
     __tablename__ = "courses"
     course_id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    studyYear = Column(Integer, nullable=True)
+    study_year = Column(Integer, nullable=True)
     specialization = Column(String, nullable=True)
+    examination_method = Column(exam_type_enum, nullable=True)
     # Profesor coordonator (unic)
     coordinator_id = Column(Integer, ForeignKey("users.user_id"))
 
-    coordinator = relationship("User", foreign_keys=[coordinator_id])
-
-    # Lista de profesori asistenți (many-to-many)
-
+    # Relații
+    coordinator = relationship("User", back_populates="coordinated_courses", foreign_keys=[coordinator_id])
     assistants = relationship("User", secondary=course_assistants, backref="assisted_courses")
+    exams = relationship("Exam", back_populates="course")
+
 
 class Exam(db.Model):
     """
@@ -208,6 +228,9 @@ class Exam(db.Model):
            professor_id (int): ID-ul profesorului care administrează examenul.
            assistant_id (int): ID-ul asistentului pentru examen.
            status (ExamStatus): Statusul examenului (ex: în așteptare, acceptat, respins).
+           start_time (Time): Ora de începere a examenului.
+           duration (int): Durata în minute a examenului.
+           details (str): Detalii opționale despre examen.
        """
     __tablename__ = "exams"
     exam_id = Column(Integer, primary_key=True)
@@ -219,6 +242,20 @@ class Exam(db.Model):
     professor_id = Column(Integer, ForeignKey("users.user_id"))
     assistant_id = Column(Integer, ForeignKey("users.user_id"))
     status = Column(SQLEnum(ExamStatus), default=ExamStatus.IN_ASTEPTARE)
+    start_time = Column(db.Time, nullable=True)  # Nou: ora de începere
+    duration = Column(Integer, nullable=True)  # Nou: durata în minute
+    details = Column(String, nullable=True)  # Nou: detalii opționale
+
+    __table_args__ = (
+        db.UniqueConstraint("course_id", "group_id", name="unique_exam_per_course_and_group"),
+    )
+
+    # Relații
+    course = relationship("Course", back_populates="exams")
+    group = relationship("Group", back_populates="exams")
+    room = relationship("Room", back_populates="exams")
+    professor = relationship("User", back_populates="exams_as_professor", foreign_keys=[professor_id])
+    assistant = relationship("User", back_populates="exams_as_assistant", foreign_keys=[assistant_id])
 
 class ExaminationPeriod(db.Model):
     """
@@ -238,8 +275,22 @@ class ExaminationPeriod(db.Model):
     __tablename__ = "examination_period"
 
     examination_period_id = Column(Integer, primary_key=True)
-    name = Column(exam_type_enum, nullable=False)
+    name = Column(exam_type_enum, nullable=False, unique=True)
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
 
 
+@validates("name")
+def validate_unique_name_for_examination_period(cls, key, name):
+    existing = db.session.query(ExaminationPeriod).filter_by(name=name).first()
+    if existing:
+        raise ValueError("Exista deja o inregistrare cu acet tip de examinare")
+    return name
+
+
+@validates("name")
+def validate_unique_teacher_id(cls, key, teacher_id):
+    existing = db.session.query(User).filter_by(teacher_id=teacher_id).first()
+    if existing:
+        raise ValueError("Exista deja o inregistrare cu acest teacher_id")
+    return teacher_id

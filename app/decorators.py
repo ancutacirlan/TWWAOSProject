@@ -1,18 +1,17 @@
 from functools import wraps
 
 from flask import jsonify
-from flask_login import current_user, login_required
+from flask_jwt_extended import verify_jwt_in_request, get_jwt
 
 
 def roles_required(*allowed_roles):
-    """Permite accesul doar utilizatorilor cu rolurile specificate."""
     def wrapper(f):
-        @login_required
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return jsonify({"error": "Autentificare necesară."}), 401
-            if current_user.role not in allowed_roles:
+            verify_jwt_in_request()
+            claims = get_jwt()
+            role = claims.get("role")
+            if role not in allowed_roles:
                 return jsonify({"error": "Acces interzis. Rol insuficient."}), 403
             return f(*args, **kwargs)
         return decorated_function
