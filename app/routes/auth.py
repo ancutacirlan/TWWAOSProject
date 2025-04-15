@@ -1,7 +1,7 @@
 import os
 
 from flasgger import swag_from
-from flask import Blueprint, jsonify, session, redirect, url_for
+from flask import Blueprint, request, jsonify, session, redirect, url_for, current_app
 from authlib.integrations.flask_client import OAuth
 from flask_jwt_extended import create_access_token
 
@@ -37,8 +37,9 @@ def init_oauth(app):
     }
 })
 def login():
-    session["nonce"] = os.urandom(16).hex()  # Generăm un nonce aleatoriu
-    return oauth.google.authorize_redirect("https://twwaosproject-production.up.railway.app/auth/callback")
+    session["nonce"] = os.urandom(16).hex()
+    print(current_app.config["GOOGLE_REDIRECT_URI"])
+    return oauth.google.authorize_redirect(current_app.config["GOOGLE_REDIRECT_URI"])
 
 
 @auth_bp.route("/auth/callback")
@@ -93,4 +94,4 @@ def callback():
 def logout():
     # Închide sesiunea utilizatorului
     session.pop("profile", None)
-    return redirect(url_for("index"))
+    return redirect(url_for("login"))
