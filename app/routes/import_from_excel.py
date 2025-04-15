@@ -1,4 +1,5 @@
 import os
+import threading
 
 import pandas as pd
 from flasgger import swag_from
@@ -141,8 +142,12 @@ def upload_users():
     }]
 })
 def sync_data():
+    threading.Thread(target=run_sync).start()
+    return jsonify({"msg": "Sincronizarea a fost pornită în fundal."}), 202
+
+
+def run_sync():
     try:
-        #pentru profesori de rescris
         fetch_and_store_data()
         send_email_notification(
             to="ancuta.cirlan1@student.usv.ro",
@@ -150,13 +155,13 @@ def sync_data():
             body=f"S-au incarcat datele necesare pentru programarea examenelor. "
                  f"Intrati in aplicatie si setati metoda de evaluare pentru cursurile la care sunteti coordonator."
         )
-        #pentru studenti de rescris
+        # pentru studenti de rescris
         send_email_notification(
             to="ancuta.cirlan1@student.usv.ro",
             subject="Incarcare date - programare examene",
             body=f"S-au incarcat datele necesare pentru programarea examenelor. "
                  f"Intrati in aplicatie si alegeti datele pentru examen"
         )
-        return jsonify({"msg": "Datele au fost sincronizate cu succes."}), 200
+        print("✅ Sincronizare completă.")
     except Exception as e:
-        return jsonify({"msg": f"Eroare: {str(e)}"}), 500
+        print(f"❌ Eroare în sincronizare: {str(e)}")
