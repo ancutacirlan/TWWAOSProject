@@ -3,7 +3,7 @@ import threading
 
 import pandas as pd
 from flasgger import swag_from
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
 from werkzeug.utils import secure_filename
 
@@ -142,26 +142,42 @@ def upload_users():
     }]
 })
 def sync_data():
-    threading.Thread(target=run_sync).start()
+    app = current_app._get_current_object()
+    threading.Thread(target=run_sync, args=(app,)).start()
     return jsonify({"msg": "Sincronizarea a fost pornită în fundal."}), 202
 
 
-def run_sync():
-    try:
-        fetch_and_store_data()
-        send_email_notification(
-            to="ancuta.cirlan1@student.usv.ro",
-            subject="Incarcare date - programare examene",
-            body=f"S-au incarcat datele necesare pentru programarea examenelor. "
-                 f"Intrati in aplicatie si setati metoda de evaluare pentru cursurile la care sunteti coordonator."
-        )
-        # pentru studenti de rescris
-        send_email_notification(
-            to="ancuta.cirlan1@student.usv.ro",
-            subject="Incarcare date - programare examene",
-            body=f"S-au incarcat datele necesare pentru programarea examenelor. "
-                 f"Intrati in aplicatie si alegeti datele pentru examen"
-        )
-        print("✅ Sincronizare completă.")
-    except Exception as e:
-        print(f"❌ Eroare în sincronizare: {str(e)}")
+def run_sync(app):
+    with app.app_context():
+        try:
+            fetch_and_store_data()
+
+            try:
+                send_email_notification(
+                    to="ancuta.cirlan1@student.usv.ro",
+                    subject="Incarcare date - profesori",
+                    body="S-au incarcat datele necesare pentru programarea examenelor. "
+                         "Intrati in aplicatie si setati metoda de evaluare pentru cursurile la care sunteti coordonator."
+
+                )
+                print("✅Email catre profesor trims ")
+
+            except Exception as e:
+                print(f"⚠️ Email catre profesor: {e}")
+
+            try:
+                send_email_notification(
+                    to="ancuta.cirlan1@student.usv.ro",
+                    subject="Incarcare date - studenti",
+                    body="S-au incarcat datele necesare pentru programarea examenelor. "
+                         "Intrati in aplicatie si alegeti datele pentru examen."
+                )
+                print("✅Email catre student trims ")
+
+            except Exception as e:
+                print(f"⚠️ Email catre student eșuat: {e}")
+
+            print("✅ Sincronizare completă.")
+
+        except Exception as e:
+            print(f"❌ Eroare în sincronizare: {e}")
