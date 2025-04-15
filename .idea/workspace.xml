@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c4e6c42f-264f-49dc-a66e-448eebf22a9c" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/routes/rooms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/auth.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,9 +91,9 @@
       <recent name="C:\Users\cirla\Desktop\exam_panner\docs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\cirla\Desktop\exam_panner" />
       <recent name="C:\Users\cirla\Desktop\exam_panner\app\static" />
       <recent name="C:\Users\cirla\Desktop\exam_panner\app\static\templates" />
-      <recent name="C:\Users\cirla\Desktop\exam_panner" />
       <recent name="C:\Users\cirla\Desktop\exam_panner\app" />
       <recent name="C:\Users\cirla\Desktop\exam_panner\static\templates\excel" />
     </key>

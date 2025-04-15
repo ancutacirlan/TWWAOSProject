@@ -1,9 +1,10 @@
 import os
 
 from flasgger import swag_from
-from flask import Blueprint, request, jsonify, session, redirect, url_for
+from flask import Blueprint, jsonify, session, redirect, url_for
 from authlib.integrations.flask_client import OAuth
 from flask_jwt_extended import create_access_token
+
 from app.models import User
 
 auth_bp = Blueprint("auth", __name__)
@@ -37,7 +38,7 @@ def init_oauth(app):
 })
 def login():
     session["nonce"] = os.urandom(16).hex()  # Generăm un nonce aleatoriu
-    return oauth.google.authorize_redirect(url_for("auth.callback", _external=True))
+    return oauth.google.authorize_redirect("https://twwaosproject-production.up.railway.app/auth/callback")
 
 
 @auth_bp.route("/auth/callback")

@@ -14,6 +14,7 @@ from app.routes.download import download_bp
 from app.routes.exams import exams_bp
 from app.routes.import_from_excel import upload_bp
 from app.routes.auth import init_oauth, auth_bp
+from app.routes.rooms import rooms_bp
 from app.routes.settings import settings_bp
 from app.routes.users import users_bp
 
@@ -67,8 +68,7 @@ def create_app():
     app.register_blueprint(courses_bp)
     app.register_blueprint(exams_bp)
     app.register_blueprint(download_bp)
-
-
+    app.register_blueprint(rooms_bp)
 
     return app
 
