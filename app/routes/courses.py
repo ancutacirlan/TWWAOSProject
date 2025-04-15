@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify
 from flasgger import swag_from
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required, current_user
+from sqlalchemy.sql.functions import user
+
 from app import db
 
 from app.decorators import roles_required
@@ -9,21 +11,25 @@ from app.models import User, Group, Course, UserRole, ExamType
 
 courses_bp = Blueprint("courses", __name__)
 
-@jwt_required
-@courses_bp.route("/courses/for/students", methods=["GET"])
-@roles_required("SG")
+@courses_bp.route("/courses", methods=["GET"])
+@roles_required("CD","SEC","SG")
 @swag_from({
     'tags': ['Cursuri'],
-    'summary': 'Vizualizare cursuri student',
-    'description': 'Returnează cursurile aferente specializării și anului de studiu ale grupei studentului.',
-    'security': [{'Bearer': []}],  # numele schemei din Swagger config
+    'summary': 'Vizualizare cursuri în funcție de rol',
+    'description': 'Returnează cursurile relevante pentru student (SG), profesor (CD) sau secretar (SEC).',
+    'security': [{'Bearer': []}],
     'responses': {
         200: {
-            'description': 'Listă de cursuri returnată cu succes.',
+            'description': 'Listă de cursuri',
             'examples': {
                 'application/json': [
-                    {"course_id": 1, "name": "Programare", "studyYear": 1, "specialization": "CS"},
-                    {"course_id": 2, "name": "Algoritmi", "studyYear": 1, "specialization": "CS"}
+                    {
+                        "id": 1,
+                        "name": "Programare",
+                        "examination_method": "oral",
+                        "specialization": "CS",
+                        "study_year": 1
+                    }
                 ]
             }
         },
@@ -32,71 +38,42 @@ courses_bp = Blueprint("courses", __name__)
         }
     }
 })
-def get_courses_for_student():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-
-    # Caută grupa în care este lider
-    group = Group.query.filter_by(leader_id=user.user_id).first()
-    if not group:
-        return jsonify({"error": "Studentul nu este asociat unui grup."}), 404
-
-    # Găsește cursurile aferente specializării și anului
-    courses = Course.query.filter_by(
-        specialization=group.specialization,
-        study_year=group.year_of_study
-    ).all()
-
-    return jsonify([
-        {
-        "id": c.course_id,
-        "name": c.name,
-        "examination_method": c.examination_method,
-        "specialization":c.specialization,
-        "study_year":c.study_year
-        } for c in courses
-    ]), 200
-
-@courses_bp.route("/courses/professor", methods=["GET"])
-@jwt_required()
-@roles_required("CD")
-@swag_from({
-    'tags': ['Cursuri'],
-    'summary': 'Listează cursurile unui profesor',
-    'description': 'Returnează toate cursurile unde utilizatorul este coordonator.',
-    'security': [{'Bearer': []}],
-    'responses': {
-        200: {
-            'description': 'Listă de cursuri',
-            'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'id': {'type': 'integer'},
-                        'name': {'type': 'string'},
-                        'examination_method': {'type': 'string'},
-                        # adaugă aici și alte câmpuri relevante dacă vrei
-                    }
-                }
-            }
-        },
-        403: {'description': 'Acces interzis.'}
-    }
-})
-def get_courses_for_professor():
+def get_courses_by_role():
     user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "Utilizatorul nu a fost găsit."}), 404
 
-    courses = Course.query.filter_by(coordinator_id=user_id).all()
+    # Secretar: vede toate cursurile
+    if user.role == UserRole.SEC:
+        courses = Course.query.all()
+
+    # Profesor coordonator: vede doar cursurile coordonate de el
+    elif user.role == UserRole.CD:
+        courses = Course.query.filter_by(coordinator_id=user_id).all()
+
+    # Student lider: vede cursurile grupei
+    elif user.role == UserRole.SG:
+        group = Group.query.filter_by(leader_id=user.user_id).first()
+        if not group:
+            return jsonify({"error": "Studentul nu este asociat unui grup."}), 404
+        courses = Course.query.filter_by(
+            specialization=group.specialization,
+            study_year=group.year_of_study
+        ).all()
+
+    else:
+        return jsonify({"error": "Rolul utilizatorului nu are acces la această resursă."}), 403
+
     course_list = [{
         "id": c.course_id,
         "name": c.name,
         "examination_method": c.examination_method,
-        "specialization":c.specialization,
-        "study_year":c.study_year
+        "specialization": c.specialization,
+        "study_year": c.study_year
     } for c in courses]
 
-    return course_list, 200
+    return jsonify(course_list), 200
 
 
 @courses_bp.route("/courses/<int:course_id>/set-examination-method", methods=["PUT"])
@@ -141,7 +118,10 @@ def set_examination_method(course_id):
     user = User.query.get(user_id)
     data = request.get_json()
     new_method = data.get("examination_method")
-
+    print(user.role)
+    print(str(UserRole.SEC))
+    print(user.role == str(UserRole.CD))
+    print(user.role == UserRole.CD)
     # Validăm metoda de examinare
     valid_methods = [et.value for et in ExamType]
     if not new_method or new_method not in valid_methods:
@@ -154,7 +134,7 @@ def set_examination_method(course_id):
         return {"error": "Cursul nu a fost găsit."}, 404
 
     # Verificăm dacă CD este coordonatorul cursului
-    if user.role == str(UserRole.CD) and course.coordinator_id != user.user_id:
+    if user.role == UserRole.CD and course.coordinator_id != user.user_id:
         return {"error": "Nu ești coordonatorul acestui curs."}, 403
 
     course.examination_method = new_method
