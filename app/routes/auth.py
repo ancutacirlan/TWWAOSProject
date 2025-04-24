@@ -97,5 +97,6 @@ def callback():
 })
 def logout():
     session.clear()
-    frontend_url = current_app.config["FRONTEND_URL"]
-    return redirect(frontend_url)
+    response = jsonify({"message": "Logged out"})
+    response.set_cookie("access_token", "", expires=0)
+    return response

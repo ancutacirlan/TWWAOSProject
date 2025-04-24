@@ -75,5 +75,6 @@ def create_app():
 
     return app
 
+
 # Creăm aplicația și legăm migrarea
 app = create_app()
