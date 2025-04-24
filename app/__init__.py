@@ -1,19 +1,18 @@
+from flasgger import Swagger
+from flask import Flask
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
 import app
-from flasgger import Swagger
-from flask import Flask
-from flask_login import LoginManager, login_manager
-
 from app.config import Config
 from app.database import db, migrate
 from app.import_data import add_admin
 from app.models import User
+from app.routes.auth import init_oauth, auth_bp
 from app.routes.courses import courses_bp
 from app.routes.download import download_bp
 from app.routes.exams import exams_bp
 from app.routes.import_from_excel import upload_bp
-from app.routes.auth import init_oauth, auth_bp
 from app.routes.rooms import rooms_bp
 from app.routes.settings import settings_bp
 from app.routes.users import users_bp
@@ -24,7 +23,11 @@ jwt = JWTManager()
 def create_app():
     """Funcție de creare a aplicației Flask"""
     app = Flask(__name__)
+
+
     app.config.from_object(Config)
+    CORS(app, supports_credentials=True, origins=[app.config["FRONTEND_URL"]])
+
 
     swagger_template = {
         "swagger": "2.0",

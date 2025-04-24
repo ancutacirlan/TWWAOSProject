@@ -1,9 +1,9 @@
 import os
-
+import secrets
+from flask import Blueprint, request, jsonify, session, redirect, current_app
 from flasgger import swag_from
-from flask import Blueprint, request, jsonify, session, redirect, url_for, current_app
-from authlib.integrations.flask_client import OAuth
 from flask_jwt_extended import create_access_token
+from authlib.integrations.flask_client import OAuth
 
 from app.models import User
 
@@ -25,7 +25,7 @@ def init_oauth(app):
     )
 
 
-@auth_bp.route("/login")
+@auth_bp.route("/login", methods=["GET"])
 @swag_from({
     'tags': ['Autentificare'],
     'summary': 'Login Google',
@@ -37,46 +37,50 @@ def init_oauth(app):
     }
 })
 def login():
-    session["nonce"] = os.urandom(16).hex()
-    print(current_app.config["GOOGLE_REDIRECT_URI"])
-    return oauth.google.authorize_redirect(current_app.config["GOOGLE_REDIRECT_URI"])
+    state = secrets.token_urlsafe(16)
+    session["oauth_state"] = state  # Salvăm manual în sesiune
+    return oauth.google.authorize_redirect(
+        redirect_uri=current_app.config["GOOGLE_REDIRECT_URI"],
+        state=state
+    )
 
 
-@auth_bp.route("/auth/callback")
+@auth_bp.route("/auth/callback", methods=["GET"])
 @swag_from({
     'tags': ['Autentificare'],
     'summary': 'Callback după login',
     'description': 'Primește tokenul de la Google, verifică emailul și loghează utilizatorul dacă există în baza de date.',
     'responses': {
-        200: {
-            'description': 'Token de acces JWT trimis utilizatorului.'
-        },
-        403: {
-            'description': 'Acces refuzat. Utilizatorul nu are permisiune.'
-        }
+        200: {'description': 'Token de acces JWT trimis utilizatorului.'},
+        403: {'description': 'Acces refuzat. Utilizatorul nu are permisiune.'}
     }
 })
 def callback():
-    # Schimbăm codul de autorizare pentru un token de acces
-    token = oauth.google.authorize_access_token()
+    # Verificare CSRF state
+    state_sent = request.args.get("state")
+    state_saved = session.get("oauth_state")
+    if state_sent != state_saved:
+        return "⚠️ CSRF Warning! State not equal in request and response.", 400
 
-    # Obținem informațiile despre utilizator
+    # Obține tokenul și user info
+    token = oauth.google.authorize_access_token()
     user_info = oauth.google.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
 
     if not user_info:
         return jsonify({"error": "Nu s-au putut obține informațiile utilizatorului."}), 400
 
-    email = user_info["email"]
+    email = user_info.get("email")
     user = User.query.filter_by(email=email).first()
 
     if user:
-        # Creăm tokenul JWT pentru utilizator
         access_token = create_access_token(
             identity=str(user.user_id),
             additional_claims={"role": user.role.value}
         )
-        return jsonify(access_token=access_token), 200
 
+        # Redirecționează spre frontend și trimite tokenul în URL (sau altă metodă)
+        frontend_url = current_app.config["FRONTEND_URL"]
+        return redirect(f"{frontend_url}/auth/callback?token={access_token}")
     return jsonify({"error": "Nu ai acces. Contactează administratorul."}), 403
 
 
@@ -92,6 +96,5 @@ def callback():
     }
 })
 def logout():
-    # Închide sesiunea utilizatorului
-    session.pop("profile", None)
-    return redirect(url_for("login"))
+    session.clear()
+    return redirect("/")
