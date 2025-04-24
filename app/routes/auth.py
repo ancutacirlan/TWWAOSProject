@@ -97,4 +97,5 @@ def callback():
 })
 def logout():
     session.clear()
-    return redirect("/")
+    frontend_url = current_app.config["FRONTEND_URL"]
+    return redirect(frontend_url)
