@@ -4,8 +4,8 @@ from flask import Blueprint, jsonify
 from app.decorators import roles_required
 from app.models import Room
 
-rooms_bp = Blueprint("rooms", __name__, url_prefix="/rooms")
-@rooms_bp.route("/", methods=["GET"])
+rooms_bp = Blueprint("rooms", __name__)
+@rooms_bp.route("/rooms", methods=["GET"])
 @roles_required("CD","SG","SEC")
 @swag_from({
     'tags': ['Rooms'],
@@ -30,9 +30,10 @@ rooms_bp = Blueprint("rooms", __name__, url_prefix="/rooms")
 })
 def get_rooms():
     rooms = Room.query.all()
+    rooms_sorted = sorted(rooms, key=lambda room: room.name)
     return jsonify([
         {
             "room_id": room.room_id,
             "name": room.name,
-        } for room in rooms
+        } for room in rooms_sorted
     ])
