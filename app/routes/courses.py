@@ -78,7 +78,7 @@ def get_courses_by_role():
 
 @courses_bp.route("/courses/<int:course_id>/set-examination-method", methods=["PUT"])
 @jwt_required()
-@roles_required("CD")
+@roles_required("CD","SEC")
 @swag_from({
     'tags': ['Cursuri'],
     'summary': 'Setează metoda de examinare pentru un curs',
