@@ -29,6 +29,7 @@ def overlaps(start1, dur1, start2, dur2):
     # Verificăm dacă există o suprapunere
     return s1 < e2 and s2 < e1
 
+
 @exams_bp.route("/propose", methods=["POST"])
 @jwt_required()
 @roles_required("SG")
@@ -185,6 +186,7 @@ def exam_date_propose():
         409: {'description': 'Conflicte de programare (sală/asistent/profesor)'}
     }
 })
+
 def review_exam_proposal():
     data = request.get_json()
     exam_id = data.get("exam_id")
@@ -343,71 +345,169 @@ def review_exam_proposal():
         return jsonify({"msg": "Decizie invalida. Statusul poate fi doar 'ACCEPTAT' sau 'RESPINS'."}), 400
 
 
-@exams_bp.route("/pending", methods=["GET"])
+@exams_bp.route("/by-status", methods=["GET"])
 @roles_required("CD")
 @swag_from({
     'tags': ['Examen'],
-    'summary': 'Vizualizează examenele în așteptare',
-    'description': 'Returnează toate propunerile de examene cu statusul "ÎN AȘTEPTARE" asociate cursurilor coordonate de utilizatorul autentificat.',
+    'summary': 'Vizualizează toate examenele coordonate, grupate pe status',
+    'description': 'Returnează toate examenele (indiferent de status) asociate cursurilor pe care le coordonează utilizatorul autentificat.',
     'responses': {
-        '200': {
-            'description': 'Lista propunerilor de examene în așteptare',
-            'content': {
+        200: {
+            'description': 'Examenele grupate pe status',
+            'examples': {
                 'application/json': {
-                    'schema': {
+                    "IN_ASTEPTARE": [
+                        {
+                            "exam_id": 4,
+                            "course_name": "Creativitate ştiinţifică",
+                            "group_name": "3711",
+                            "specialization": "Calculatoare",
+                            "exam_date": "2025-07-09",
+                            "start_time": None,
+                            "duration": None,
+                            "room": None,
+                            "building": None,
+                            "type": "EXAMEN",
+                            "status": "IN_ASTEPTARE"
+                        }
+                    ],
+                    "ACCEPTAT": [
+                        {
+                            "exam_id": 5,
+                            "course_name": "Curs 2",
+                            "group_name": "3711",
+                            "specialization": "Calculatoare",
+                            "exam_date": "2025-07-10",
+                            "start_time": "10:00",
+                            "duration": 120,
+                            "room": "C203",
+                            "building": "C",
+                            "type": "EXAMEN",
+                            "status": "ACCEPTAT"
+                        }
+                    ],
+                    "RESPINS": [
+                        {
+                            "exam_id": 6,
+                            "course_name": "Rețele neuronale",
+                            "group_name": "3711",
+                            "specialization": "Calculatoare",
+                            "exam_date": "2025-07-01",
+                            "start_time": "14:00",
+                            "duration": 90,
+                            "room": "B102",
+                            "building": "B",
+                            "type": "EXAMEN",
+                            "status": "RESPINS"
+                        }
+                    ]
+                }
+            },
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'IN_ASTEPTARE': {
                         'type': 'array',
                         'items': {
                             'type': 'object',
                             'properties': {
-                                'exam_id': {'type': 'integer', 'description': 'ID-ul examenului'},
-                                'course_name': {'type': 'string', 'description': 'Numele cursului'},
-                                'group_name': {'type': 'string', 'description': 'Numele grupei'},
-                                'specialization': {'type': 'string', 'description': 'Specializarea cursului'},
-                                'exam_date': {'type': 'string', 'format': 'date',
-                                              'description': 'Data propusă pentru examen'},
-                                'type': {'type': 'string', 'description': 'Tipul examenului (EXAMEN / COLOCVIU)'}
+                                'exam_id': {'type': 'integer'},
+                                'course_name': {'type': 'string'},
+                                'group_name': {'type': 'string'},
+                                'specialization': {'type': 'string'},
+                                'exam_date': {'type': 'string', 'format': 'date'},
+                                'start_time': {'type': ['string', 'null']},
+                                'duration': {'type': ['integer', 'null']},
+                                'room': {'type': ['string', 'null']},
+                                'building': {'type': ['string', 'null']},
+                                'type': {'type': 'string'},
+                                'status': {'type': 'string'}
+                            }
+                        }
+                    },
+                    'ACCEPTAT': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'exam_id': {'type': 'integer'},
+                                'course_name': {'type': 'string'},
+                                'group_name': {'type': 'string'},
+                                'specialization': {'type': 'string'},
+                                'exam_date': {'type': 'string', 'format': 'date'},
+                                'start_time': {'type': ['string', 'null']},
+                                'duration': {'type': ['integer', 'null']},
+                                'room': {'type': ['string', 'null']},
+                                'building': {'type': ['string', 'null']},
+                                'type': {'type': 'string'},
+                                'status': {'type': 'string'}
+                            }
+                        }
+                    },
+                    'RESPINS': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'exam_id': {'type': 'integer'},
+                                'course_name': {'type': 'string'},
+                                'group_name': {'type': 'string'},
+                                'specialization': {'type': 'string'},
+                                'exam_date': {'type': 'string', 'format': 'date'},
+                                'start_time': {'type': ['string', 'null']},
+                                'duration': {'type': ['integer', 'null']},
+                                'room': {'type': ['string', 'null']},
+                                'building': {'type': ['string', 'null']},
+                                'type': {'type': 'string'},
+                                'status': {'type': 'string'}
                             }
                         }
                     }
                 }
             }
         },
-        '403': {
+        403: {
             'description': 'Acces interzis - utilizatorul nu are rolul corespunzător'
         }
     }
 })
-def get_pending_exams():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+
+
+def get_exams_by_status():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
 
     if not user or user.role != UserRole.CD:
         return jsonify({"msg": "Acces interzis"}), 403
 
-    pending_exams = (
-        db.session.query(Exam)
+    # Toate examenele de la cursurile unde e coordonator
+    exams = (
+        Exam.query
         .join(Course)
-        .filter(
-            Course.coordinator_id == user.user_id,
-            Exam.status == ExamStatus.IN_ASTEPTARE
-        )
+        .filter(Course.coordinator_id == user.user_id)
+        .options(joinedload(Exam.course), joinedload(Exam.group), joinedload(Exam.room))
         .all()
     )
 
-    response = []
-    for exam in pending_exams:
-        course = Course.query.get(exam.course_id)
-        group = Group.query.get(exam.group_id)
-        response.append({
+    grouped_exams = {"IN_ASTEPTARE": [], "ACCEPTAT": [], "RESPINS": []}
+
+    for exam in exams:
+        status = exam.status.name if exam.status else "IN_ASTEPTARE"
+        grouped_exams[status].append({
             "exam_id": exam.exam_id,
-            "course_name": course.name if course else "Necunoscut",
-            "group_name": group.name if group else "Necunoscut",
-            "specialization": course.specialization if course else "Necunoscut",
-            "exam_date": exam.exam_date.isoformat(),
-            "type": exam.type
+            "course_name": exam.course.name if exam.course else None,
+            "group_name": exam.group.name if exam.group else None,
+            "specialization": exam.course.specialization if exam.course else None,
+            "exam_date": exam.exam_date.isoformat() if exam.exam_date else None,
+            "start_time": exam.start_time.strftime("%H:%M") if exam.start_time else None,
+            "duration": exam.duration,
+            "room": exam.room.name if exam.room else None,
+            "building": exam.room.building if exam.room else None,
+            "type": exam.type,
+            "status": status
         })
 
-    return jsonify(response), 200
+    return jsonify(grouped_exams), 200
 
 
 @exams_bp.route('/for/group', methods=['GET'])
@@ -695,7 +795,8 @@ def exam_to_dict(exam):
 @swag_from({
     'tags': ['Examen'],
     'summary': 'Modifică detaliile unui examen',
-    'description': 'Permite secretariatului să modifice toate detaliile examenului, inclusiv data, sala, asistentul, profesorul, durata, etc. Se efectuează verificări pentru conflicte de programare.',
+    'description': 'Permite secretariatului să modifice toate detaliile examenului, inclusiv data, sala, asistentul, profesorul, durata, etc.'
+                   ' Se efectuează verificări pentru conflicte de programare.',
     'parameters': [
         {
             'name': 'exam_id',
@@ -836,3 +937,204 @@ def edit_exam_secretariat(exam_id):
     db.session.commit()
 
     return jsonify({"msg": "Examenul a fost actualizat cu succes!"}), 200
+
+
+@exams_bp.route('/all', methods=['GET'])
+@roles_required("SEC")
+@swag_from({
+    'tags': ['Examen'],
+    'summary': 'Vezi toate examenele din sistem',
+    'description': 'Permite secretarului facultății să vadă toate examenele programate dar si cele neprogramate.',
+    'security': [{'Bearer': []}],
+    'responses': {
+        200: {
+            'description': 'Lista completă a examenelor',
+            'schema':{
+  'type': 'object',
+  'properties': {
+    'exams_by_status': {
+      'type': 'object',
+      'properties': {
+        'ACCEPTAT': {
+          'type': 'array',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'exam_id': {'type': 'integer', 'example': 5},
+              'course_name': {'type': 'string', 'example': 'Curs 2'},
+              'group_name': {'type': 'string', 'example': '3711'},
+              'exam_type': {'type': 'string', 'example': 'EXAMEN'},
+              'exam_date': {'type': 'string', 'format': 'date', 'example': '2025-07-10'},
+              'start_time': {'type': 'string', 'format': 'time', 'example': '10:00'},
+              'duration': {'type': 'integer', 'example': 120},
+              'room': {'type': 'string', 'example': 'C203'},
+              'building': {'type': 'string', 'example': 'C'},
+              'professor': {'type': 'string', 'example': 'Ancuta Cirlan'},
+              'assistant': {'type': 'string', 'example': 'Adina Luminiţa Bărîlă'},
+              'status': {'type': 'string', 'enum': ['ACCEPTAT', 'IN_ASTEPTARE', 'RESPINS'], 'example': 'ACCEPTAT'},
+              'details': {'type': 'string', 'example': 'Examenul va avea loc în sala A1.'}
+            }
+          }
+        },
+        'IN_ASTEPTARE': {
+          'type': 'array',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'exam_id': {'type': 'integer', 'example': 2},
+              'course_name': {'type': 'string', 'example': 'Tehnici de invatarea automata'},
+              'group_name': {'type': 'string', 'example': '3711'},
+              'exam_type': {'type': 'string', 'example': 'EXAMEN'},
+              'exam_date': {'type': 'string', 'format': 'date', 'example': '2025-06-10'},
+              'start_time': {'type': ['string', 'null'], 'format': 'time', 'example': None},
+              'duration': {'type': ['integer', 'null'], 'example': None},
+              'room': {'type': ['string', 'null'], 'example': None},
+              'building': {'type': ['string', 'null'], 'example': None},
+              'professor': {'type': 'string', 'example': 'Ştefan Gheorghe Pentiuc'},
+              'assistant': {'type': ['string', 'null'], 'example': None},
+              'status': {'type': 'string', 'enum': ['ACCEPTAT', 'IN_ASTEPTARE', 'RESPINS'], 'example': 'IN_ASTEPTARE'},
+              'details': {'type': ['string', 'null'], 'example': None}
+            }
+          }
+        },
+        'RESPINS': {
+          'type': 'array',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'exam_id': {'type': 'integer', 'example': 2},
+              'course_name': {'type': 'string', 'example': 'Tehnici de invatarea automata'},
+              'group_name': {'type': 'string', 'example': '3711'},
+              'exam_type': {'type': 'string', 'example': 'EXAMEN'},
+              'exam_date': {'type': 'string', 'format': 'date', 'example': '2025-06-10'},
+              'start_time': {'type': ['string', 'null'], 'format': 'time', 'example': None},
+              'duration': {'type': ['integer', 'null'], 'example': None},
+              'room': {'type': ['string', 'null'], 'example': None},
+              'building': {'type': ['string', 'null'], 'example': None},
+              'professor': {'type': 'string', 'example': 'Ştefan Gheorghe Pentiuc'},
+              'assistant': {'type': ['string', 'null'], 'example': None},
+              'status': {'type': 'string', 'enum': ['ACCEPTAT', 'IN_ASTEPTARE', 'RESPINS'], 'example': 'IN_ASTEPTARE'},
+              'details': {'type': ['string', 'null'], 'example': None}
+            }
+          }
+        }
+      }
+    },
+    'missing_exams': {
+      'type': 'array',
+      'items': {
+        'type': 'object',
+        'properties': {
+          'group': {'type': 'string', 'example': '3711'},
+          'leader': {'type': 'string', 'example': 'alexandra'},
+          'missing_exams': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'course_name': {'type': 'string', 'example': 'Algoritmi paraleli avansati'},
+                'coordinator': {'type': 'string', 'example': 'Remus Prodan'}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+        },
+        403: {
+            'description': 'Acces interzis. Trebuie să aveți rolul de secretar al facultății (SEC).'
+        }
+    }
+})
+def get_all_exams_and_unassigned_courses():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    courses = Course.query.options(joinedload(Course.coordinator), joinedload(Course.exams)).all()
+    groups = Group.query.all()
+
+    # Pentru fiecare curs determinăm grupele care NU au examen programat
+    group_missing_exams = {}
+
+    for course in courses:
+        # Obținem grupele relevante pentru curs (în funcție de specializare și an de studiu)
+        relevant_groups = [
+            group for group in groups
+            if group.specialization == course.specialization and group.year_of_study == course.study_year
+        ]
+
+        for group in relevant_groups:
+            # Verificăm dacă există deja un examen între acest curs și grupă
+            exam_exists = any(
+                exam for exam in course.exams if exam.group_id == group.group_id
+            )
+            if not exam_exists:
+                group_name = group.name
+                if group_name not in group_missing_exams:
+                    group_missing_exams[group_name] = []
+
+                group_missing_exams[group_name].append({
+                    "course_name": course.name,
+                    "coordinator": course.coordinator.name if course.coordinator else None
+                })
+
+    # Convertim într-o listă sortată după grupă
+    groups_without_exam_sorted = [
+        {
+            "group": group_name,
+            "leader": group.leader.name if group.leader else None,
+            "missing_exams": sorted(missing, key=lambda x: x["course_name"])
+        }
+        for group_name, missing in sorted(group_missing_exams.items(), key=lambda x: x[0])
+    ]
+
+    # Găsim toate examenele și le sortăm după status
+    exams = Exam.query.options(
+        joinedload(Exam.course),
+        joinedload(Exam.room),
+        joinedload(Exam.professor),
+        joinedload(Exam.assistant),
+        joinedload(Exam.group)
+    ).all()
+
+    # Pregătim examenele grupate după status
+    exams_by_status = {
+        "IN_ASTEPTARE": [],
+        "RESPINS": [],
+        "ACCEPTAT": []
+    }
+
+    for exam in exams:
+        status_key = exam.status.name if exam.status else "NECUNOSCUT"
+
+        exam_info = {
+            "exam_id": exam.exam_id,
+            "course_name": exam.course.name,
+            "group_name": exam.group.name,
+            "exam_type": str(exam.type),
+            "exam_date": exam.exam_date.strftime("%Y-%m-%d") if exam.exam_date else None,
+            "start_time": exam.start_time.strftime("%H:%M") if exam.start_time else None,
+            "duration": exam.duration,
+            "room": exam.room.name if exam.room else None,
+            "building": exam.room.building if exam.room else None,
+            "professor": exam.professor.name if exam.professor else None,
+            "assistant": exam.assistant.name if exam.assistant else None,
+            "status": exam.status.name if exam.status else None,
+            "details": exam.details
+        }
+
+        # Adaugă la grupul corespunzător statusului
+        if status_key in exams_by_status:
+            exams_by_status[status_key].append(exam_info)
+        else:
+            exams_by_status[status_key] = [exam_info]  # fallback dacă apare un status necunoscut
+
+    return jsonify({
+        "missing_exams": groups_without_exam_sorted,
+        "exams_by_status": exams_by_status
+    }), 200
+
+

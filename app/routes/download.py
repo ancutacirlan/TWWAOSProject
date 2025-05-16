@@ -50,14 +50,14 @@ download_bp = Blueprint("download", __name__)
     }
 })
 def download_user_template():
-    file_path = os.path.join(current_app.root_path, 'static', 'templates', 'excel', 'user_template.xlsx')
+    file_path = os.path.join(current_app.root_path, 'static', 'templates', 'excel', 'utilizatori_SG.xlsx')
     print(file_path)
 
     try:
         return send_file(
             file_path,
             as_attachment=True,
-            download_name="model_utilizatori.xlsx",
+            download_name="model_utilizatori_SG.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     except FileNotFoundError:
@@ -92,10 +92,10 @@ def download_exams():
     ws = wb.active
     ws.title = "Examene"
 
-    # Adăugăm header-ul pentru coloane
+
     ws.append([
-        "ID Examen", "Curs", "Grup", "Data Examen", "Tip Examen", "Sală",
-        "Profesor", "Asistent", "Status", "Ora Începerii", "Durată", "Detalii"
+        "Grupa", "Disciplina", "Examinator", "Asistent", "Data examen/colocviu", "Ora examen/colocviu",
+        "Sala"
     ])
 
     # Obținem toate examenele din baza de date, sortate după data și ora examenului
@@ -109,20 +109,16 @@ def download_exams():
         professor = exam.professor
         assistant = exam.assistant
 
+
         # Adăugăm informațiile într-o linie în fișierul Excel
         ws.append([
-            exam.exam_id,
+            group.name + "/" + str(group.year_of_study) + "/" + group.specialization,
             course.name,
-            group.name,
-            exam.exam_date.strftime("%Y-%m-%d"),  # Formatează data
-            str(exam.type),  # Tipul examenului (EXAMEN sau COLOCVIU)
-            room.name if room else "N/A",  # Verifică dacă există sală
             professor.name,
-            assistant.name if assistant else "N/A",  # Verifică dacă există asistent
-            exam.status.name,
+            assistant.name if assistant else "N/A",
+            exam.exam_date.strftime("%Y-%m-%d"),  # Formatează data
             exam.start_time.strftime("%H:%M") if exam.start_time else "N/A",  # Formatează ora
-            exam.duration if exam.duration else "N/A",
-            exam.details if exam.details else "N/A"
+            room.name if room else "N/A",  # Verifică dacă există sală
         ])
 
     # Salvează fișierul într-un obiect BytesIO
@@ -170,12 +166,9 @@ def download_exams_pdf():
 
     exams = db.session.query(Exam).order_by(Exam.exam_date.asc(), Exam.start_time.asc()).all()
 
-    # Creăm lista de date pentru tabel
     data = [
-        [
-            "ID Examen", "Curs", "Grup", "Data Examen", "Tip Examen", "Sală",
-            "Profesor", "Asistent", "Ora Începerii", "Durată", "Detalii"
-        ]
+        ["Grupa", "Disciplina", "Examinator", "Asistent", "Data examen/colocviu", "Ora examen/colocviu",
+         "Sala"]
     ]
 
     # Adăugăm datele examenele
@@ -187,24 +180,20 @@ def download_exams_pdf():
         assistant = exam.assistant
 
         data.append([
-            exam.exam_id,
+            group.name + "/" + str(group.year_of_study) + "/" + group.specialization,
             course.name,
-            group.name,
-            exam.exam_date.strftime("%Y-%m-%d"),  # Formatează data
-            str(exam.type),  # Tipul examenului (EXAMEN sau COLOCVIU)
-            room.name if room else "N/A",  # Verifică dacă există sală
             professor.name,
-            assistant.name if assistant else "N/A",  # Verifică dacă există asistent
+            assistant.name if assistant else "N/A",
+            exam.exam_date.strftime("%Y-%m-%d"),  # Formatează data
             exam.start_time.strftime("%H:%M") if exam.start_time else "N/A",  # Formatează ora
-            exam.duration if exam.duration else "N/A",
-            exam.details if exam.details else "N/A"
+            room.name if room else "N/A",  # Verifică dacă există sală
         ])
 
     # Crează documentul PDF
     pdf_file = os.path.join(current_app.root_path, 'static', "examene.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=landscape(letter))  # Format landscape
 
-    title = "Lista Examene - Semestrul Actual"
+    title = "Programarea colocviilor si examenelor"
     styles = getSampleStyleSheet()
     title_style = styles['Title']
     title_paragraph = Paragraph(title, title_style)
@@ -226,7 +215,7 @@ def download_exams_pdf():
     table.setStyle(style)
 
     # Adaugă tabelul la document
-    elements = [title_paragraph,table]
+    elements = [title_paragraph, table]
     doc.build(elements)
 
     print(f"Fișierul PDF a fost generat: {pdf_file}")

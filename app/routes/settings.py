@@ -4,7 +4,7 @@ from flasgger import swag_from
 from flask import Blueprint, request, jsonify
 
 from app.decorators import roles_required
-from app.models import ExaminationPeriod, db, ExamType, UserRole
+from app.models import ExaminationPeriod, db, ExamType, UserRole, User, Exam, Course, Group, Room, course_assistants
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
@@ -213,3 +213,36 @@ def get_examination_period_by_id(period_id):
         "period_start": period.period_start.isoformat(),
         "period_end": period.period_end.isoformat()
     }), 200
+
+
+@settings_bp.route("/reset", methods=["POST"])
+@roles_required("ADM","SEC")
+@swag_from({
+    'tags': ['Setări'],
+    'summary': 'Resetează baza de date',
+    'description': 'Șterge toate datele din baza de date, cu excepția utilizatorilor cu rol ADM și SEC.',
+    'responses': {
+        200: {'description': 'Resetare realizată cu succes'},
+        403: {'description': 'Acces interzis'},
+        500: {'description': 'Eroare la resetare'}
+    }
+})
+def reset_database():
+    try:
+        # Ștergem toate înregistrările din tabelele non-user
+        db.session.execute(course_assistants.delete())
+        Exam.query.delete(synchronize_session=False)
+        Course.query.delete(synchronize_session=False)
+        Group.query.delete(synchronize_session=False)
+        Room.query.delete(synchronize_session=False)
+        ExaminationPeriod.query.delete(synchronize_session=False)
+
+        # Ștergem utilizatorii care nu sunt ADM sau SEC
+        User.query.filter(~User.role.in_([UserRole.ADM, UserRole.SEC])).delete(synchronize_session=False)
+
+        db.session.commit()
+        return jsonify({"message": "Resetare realizată cu succes"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Eroare la resetare", "error": str(e)}), 500
