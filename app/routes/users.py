@@ -9,11 +9,11 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 
 
 @users_bp.route('/professors', methods=['GET'])
-@roles_required("CD", "SEC")
+@roles_required("CD", "SEC", "ADM")
 @swag_from({
     'tags': ['Utilizatori'],
     'summary': 'Obține lista cadrelor didactice',
-    'description': 'Returnează o listă cu toate cadrele didactice (utilizatori cu rolul CD). Accesibil pentru SEC și CD.',
+    'description': 'Returnează o listă cu toate cadrele didactice (utilizatori cu rolul CD). Accesibil pentru ADM, SEC și CD.',
     'responses': {
         200: {
             'description': 'Lista cadrelor didactice',

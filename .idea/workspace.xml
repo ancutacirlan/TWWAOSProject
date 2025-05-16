@@ -5,15 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c4e6c42f-264f-49dc-a66e-448eebf22a9c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routes/download.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/download.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routes/exams.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/exams.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routes/import_from_excel.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/import_from_excel.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/settings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/routes/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/users.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/examene.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/examene.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/templates/excel/user_template.xlsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/uploads/users.xlsx" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -199,7 +191,7 @@
       <workItem from="1746434819108" duration="5012000" />
       <workItem from="1746506894798" duration="19961000" />
       <workItem from="1747153517972" duration="12907000" />
-      <workItem from="1747380094084" duration="10329000" />
+      <workItem from="1747380094084" duration="11307000" />
     </task>
     <servers />
   </component>
