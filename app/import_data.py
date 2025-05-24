@@ -82,7 +82,8 @@ def fetch_and_store_courses(professor):
         # Extragem anul și specializarea, verificând facultatea
         study_year, specialization, faculty = extract_year_specialization_from_pair(course_groups, entry["id"])
         if study_year is None or specialization is None or faculty is None:
-            print(f"⚠️ Curs ignorat (nu este de la {current_app.config.get("SHORT_FACULTY_NAME")}): {topic_name} - {professor.teacherId}")
+            print(
+                f"⚠️ Curs ignorat (nu este de la {current_app.config.get('SHORT_FACULTY_NAME')}): {topic_name} - {professor.teacherId}")
             continue
 
 

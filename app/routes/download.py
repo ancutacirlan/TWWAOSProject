@@ -130,7 +130,7 @@ def download_exams():
     return send_file(
         excel_file,
         as_attachment=True,
-        download_name=f"examene_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx",
+        download_name=f"examene_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -224,6 +224,6 @@ def download_exams_pdf():
     return send_file(
         pdf_file,
         as_attachment=True,
-        download_name=f"examene_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.pdf",
+        download_name=f"examene_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf",
         mimetype="application/pdf"
     )
